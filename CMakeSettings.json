@@ -1,0 +1,32 @@
+﻿{
+  "configurations": [
+    {
+      "name": "Linux-Debug",
+      "generator": "Unix Makefiles",
+      "configurationType": "Debug",
+      "cmakeExecutable": "/opt/cmake-3.12.4-Linux-x86_64/bin/cmake",
+      "remoteCopySourcesExclusionList": [ ".vs", ".git", "out" ],
+      "cmakeCommandArgs": "-DCMAKE_BUILD_TYPE=Debug",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "inheritEnvironments": [ "linux_x64" ],
+      "remoteMachineName": "1609219448;10.0.2.83 (username=root, port=22, authentication=Password)",
+      "remoteCMakeListsRoot": "$HOME/projects/${projectDirName}/src",
+      "remoteBuildRoot": "$HOME/projects/${projectDirName}/out/build/${name}",
+      "remoteInstallRoot": "$HOME/projects/${projectDirName}/out/install/${name}",
+      "remoteCopySources": true,
+      "rsyncCommandArgs": "-t --delete --delete-excluded",
+      "remoteCopyBuildOutput": false,
+      "remoteCopySourcesMethod": "rsync",
+      "addressSanitizerRuntimeFlags": "detect_leaks=0",
+      "variables": [
+        {
+          "name": "CMAKE_INSTALL_PREFIX",
+          "value": "/root/projects/xcore/out/install/Linux-Debug",
+          "type": "PATH"
+        }
+      ],
+      "intelliSenseMode": "linux-gcc-x64"
+    }
+  ]
+}
