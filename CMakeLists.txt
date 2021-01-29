@@ -7,7 +7,7 @@ include (cmake/utils.cmake)
 set(CMAKE_CXX_FLAGS "$ENV{CXXFLAGS} -rdynamic -O0 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined")
 
 include_directories(.)
-include_directories(${PROJECT_SOURCE_DIR}3rdparty/yaml-cpp/include)
+include_directories(${PROJECT_SOURCE_DIR}/3rdparty/yaml-cpp/include)
 link_directories(${PROJECT_SOURCE_DIR}/3rdparty/yaml-cpp/lib)
 
 #find_library(YAMLCPP yaml-cpp)
@@ -31,7 +31,7 @@ target_link_libraries(test sylar libyaml-cpp_static.a)
 add_executable(test_config tests/test_config.cc)
 add_dependencies(test_config sylar)
 force_redefine_file_macro_for_sources(test_config) #__FILE__
-target_link_libraries(test_config sylar ${YAMLCPP})
+target_link_libraries(test_config sylar libyaml-cpp_static.a)
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
