@@ -1,1 +1,0 @@
-/usr/bin/c++   -rdynamic -O0 -ggdb -std=c++11 -Wall -Wno-deprecated -Werror -Wno-unused-function -Wno-builtin-macro-redefined -g  -rdynamic CMakeFiles/test.dir/tests/test.cc.o  -o bin/test  -L/root/NetFrameWork/3rdparty/yaml-cpp/lib -Wl,-rpath,/root/NetFrameWork/3rdparty/yaml-cpp/lib:/root/NetFrameWork/build/lib lib/libsylar.so -Wl,-Bstatic -lyaml-cpp_static -Wl,-Bdynamic 

@@ -1,5 +1,0 @@
-/root/NetFrameWork/build/CMakeFiles/rebuild_cache.dir
-/root/NetFrameWork/build/CMakeFiles/sylar.dir
-/root/NetFrameWork/build/CMakeFiles/test.dir
-/root/NetFrameWork/build/CMakeFiles/test_config.dir
-/root/NetFrameWork/build/CMakeFiles/edit_cache.dir
