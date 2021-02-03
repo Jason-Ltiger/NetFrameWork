@@ -7,11 +7,22 @@
 #include <sys/syscall.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <vector>
+#include <string>
+#include "sylar/fiber.h"
 
 namespace sylar {
 
 pid_t GetThreadId();
 uint32_t GetFiberId();
+
+
+void Backtrace(std::vector<std::string>& bt, int size = 64, int skip = 1);
+std::string BacktraceToString(int size = 64, int skip = 2, const std::string& prefix = "");
+
+//Ê±¼äms
+uint64_t GetCurrentMS();
+uint64_t GetCurrentUS();
 
 }
 

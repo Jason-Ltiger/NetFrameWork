@@ -31,7 +31,7 @@ void fun3() {
         SYLAR_LOG_INFO(g_logger) << "========================================";
     }
 }
-
+#if 0
 int main(int argc, char** argv) {
     SYLAR_LOG_INFO(g_logger) << "thread test begin";
     YAML::Node root = YAML::LoadFile("/home/sylar/test/sylar/bin/conf/log2.yml");
@@ -51,4 +51,50 @@ int main(int argc, char** argv) {
     SYLAR_LOG_INFO(g_logger) << "thread test end";
     SYLAR_LOG_INFO(g_logger) << "count=" << count;
     return 0;
+}
+#endif
+
+#include <ucontext.h>
+#include <stdio.h>
+
+void func1(void* arg)
+{
+    puts("1");
+    puts("11");
+    puts("111");
+    puts("1111");
+}
+
+void context_test()
+{
+    char stack[1024 * 128];
+    
+    ucontext_t child, main;
+    ///
+   char stack2[1024 * 128];
+   main.uc_stack.ss_sp = stack2;//指定栈空间
+   main.uc_stack.ss_size = sizeof(stack2);//指定栈空间大小
+   main.uc_stack.ss_flags = 0;
+   ///
+
+    
+    getcontext(&child); //获取当前上下文
+    child.uc_stack.ss_sp = stack;//指定栈空间
+    child.uc_stack.ss_size = sizeof(stack);//指定栈空间大小
+    child.uc_stack.ss_flags = 0;
+    child.uc_link = &main;//设置后继上下文
+    //child.uc_link = nullptr;
+    makecontext(&child, (void (*)(void))func1, 0);//修改上下文指向func1函
+    swapcontext(&main, &child);//切换到child上下文，保存当前上下文到main
+    puts("main");//如果设置了后继上下文，func1函数指向完后会返回此处
+}
+
+
+
+int main()
+{
+    context_test();
+    puts("hahah");
+    return 0;
+
 }
