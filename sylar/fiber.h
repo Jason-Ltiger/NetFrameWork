@@ -25,7 +25,7 @@ namespace sylar {
     private:
         Fiber();
     public:
-        Fiber(std::function<void()> cb, size_t stacksize = 0);
+        Fiber(std::function<void()> cb, size_t stacksize = 1024 * 1024);
         ~Fiber();
 
     public:

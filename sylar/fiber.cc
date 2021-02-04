@@ -11,7 +11,7 @@ namespace sylar {
     static std::atomic<uint64_t> s_fiber_count{ 0 };
     //当前线程执行的协程
     static thread_local Fiber* t_fiber = nullptr;
-    Fiber::ptr t_threadFiber = nullptr;
+    static thread_local Fiber::ptr t_threadFiber = nullptr;
     static ConfigVar<uint32_t>::ptr g_fiber_stack_size =
         Config::Lookup<uint32_t>("fiber.stack_size", 1024 * 1024, "fiber stack size");
 
@@ -36,7 +36,6 @@ namespace sylar {
         if (getcontext(&m_ctx)) {
             SYLAR_ASSERT2(false, "getcontext");
         }
-        ++s_fiber_id;
         SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber id" << m_id;
     };
     //真正创建协程
