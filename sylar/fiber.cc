@@ -164,7 +164,11 @@ namespace sylar {
              SYLAR_LOG_ERROR(g_logger) << "Fiber Except" ;
          
          }
-
+         // 协程栈释放智能指针的释放权
+         auto raw_ptr =  cur.get();
+         cur.reset();
+         //返回主协程
+         raw_ptr->swapOut();
 
      }
      uint64_t Fiber::GetFiberId(){
