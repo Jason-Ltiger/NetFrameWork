@@ -68,8 +68,8 @@ public:
     typedef std::shared_ptr<LogEvent> ptr;
     LogEvent(std::shared_ptr<Logger> logger, LogLevel::Level level
             ,const char* file, int32_t m_line, uint32_t elapse
-            , uint32_t thread_id, uint32_t fiber_id, uint64_t time,
-            const std::string& thread_name);
+            ,uint32_t thread_id, uint32_t fiber_id, uint64_t time
+            ,const std::string& thread_name);
 
     const char* getFile() const { return m_file;}
     int32_t getLine() const { return m_line;}
@@ -77,10 +77,10 @@ public:
     uint32_t getThreadId() const { return m_threadId;}
     uint32_t getFiberId() const { return m_fiberId;}
     uint64_t getTime() const { return m_time;}
+    const std::string& getThreadName() const { return m_threadName;}
     std::string getContent() const { return m_ss.str();}
     std::shared_ptr<Logger> getLogger() const { return m_logger;}
     LogLevel::Level getLevel() const { return m_level;}
-    const std::string& getThreadName() const { return m_threadName; }
 
     std::stringstream& getSS() { return m_ss;}
     void format(const char* fmt, ...);
@@ -92,11 +92,11 @@ private:
     uint32_t m_threadId = 0;       //线程id
     uint32_t m_fiberId = 0;        //协程id
     uint64_t m_time = 0;           //时间戳
+    std::string m_threadName;
     std::stringstream m_ss;
 
     std::shared_ptr<Logger> m_logger;
     LogLevel::Level m_level;
-    std::string m_threadName;
 };
 
 class LogEventWrap {

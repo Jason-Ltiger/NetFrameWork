@@ -1,6 +1,5 @@
-#ifndef  __SYLAR_FIBER_H
-#define  __SYLAR_FIBER_H
-
+#ifndef __SYLAR_FIBER_H__
+#define __SYLAR_FIBER_H__
 
 #include <memory>
 #include <functional>
@@ -9,59 +8,72 @@
 
 namespace sylar {
 
-    class Fiber : public std::enable_shared_from_this<Fiber> {
+class Scheduler;
+class Fiber : public std::enable_shared_from_this<Fiber> {
+friend class Scheduler;
+public:
+    typedef std::shared_ptr<Fiber> ptr;
 
-    public:
-        typedef std::shared_ptr<Fiber> ptr;
-        enum State {
-            INIT,
-            HOLD,
-            EXEC,
-            TERM,
-            READY,
-            EXCEPT
-        };
-
-    private:
-        Fiber();
-    public:
-        Fiber(std::function<void()> cb, size_t stacksize = 1024 * 1024);
-        ~Fiber();
-
-    public:
-        //ÖØÖÃĞ­³Ìº¯Êı
-        void reset(std::function<void()> cb);
-        // ÇĞ»»µ±Ç°Ğ­³ÌÖ´ĞĞ
-        void swapIn();
-        // ÇĞ»»µ½ºóÌ¨Ö´ĞĞ
-        void swapOut();
-        //
-        void* debugstack() { return m_stack; }
-        uint64_t getId() const { return m_id; };
-
-    public:
-        //ÉèÖÃµ±Ç°Ğ­³Ì
-        static void setThis(Fiber * f);
-        //·µ»Øµ±Ç°Ğ­³Ì
-        static Fiber::ptr getThis();
-        //ÈÃ³öĞ­³ÌÖ´ĞĞµ½ºóÌ¨£¬²¢ÇÒÉèÖÃÎªready×´Ì¬
-        static void YeildToReady();
-        //ÈÃ³öĞ­³ÌÖ´ĞĞµ½ºóÌ¨£¬²¢ÇÒÉèÖÃÎªhold×´Ì¬
-        static void YieldToHold();
-        static uint64_t totalFibers();
-
-        static void MainFunc();
-        static uint64_t GetFiberId();
-    private:
-        //Ğ­³Ì³ÉÔ±±äÁ¿
-        uint64_t              m_id = 0;
-        uint32_t              m_stack_size = 0;
-        State                 m_state = INIT;
-
-        ucontext_t            m_ctx;
-        void*                 m_stack = nullptr;
-        std::function<void()> m_cb;
+    enum State {
+        //åˆå§‹æ€
+        INIT,
+        //æŒ‚èµ·æ€
+        HOLD,
+        //æ‰§è¡Œæ€
+        EXEC,
+        //ç»ˆæ­¢æ€
+        TERM,
+        //å°±ç»ªæ€
+        READY,
+        //å¼‚å¸¸æ€
+        EXCEPT
     };
+private:
+    Fiber();
+
+public:
+    Fiber(std::function<void()> cb, size_t stacksize = 1024 * 1024, bool use_caller = false);
+    ~Fiber();
+
+    //é‡ç½®åç¨‹å‡½æ•°ï¼Œå¹¶é‡ç½®çŠ¶æ€
+    //INITï¼ŒTERM
+    void reset(std::function<void()> cb);
+    //åˆ‡æ¢åˆ°å½“å‰åç¨‹æ‰§è¡Œ
+    void swapIn();
+    //åˆ‡æ¢åˆ°åå°æ‰§è¡Œ
+    void swapOut();
+
+    void call();
+    void back();
+
+    uint64_t getId() const { return m_id;}
+    State getState() const { return m_state;}
+public:
+    //è®¾ç½®å½“å‰åç¨‹
+    static void SetThis(Fiber* f);
+    //è¿”å›å½“å‰åç¨‹
+    static Fiber::ptr GetThis();
+    //åç¨‹åˆ‡æ¢åˆ°åå°ï¼Œå¹¶ä¸”è®¾ç½®ä¸ºReadyçŠ¶æ€
+    static void YieldToReady();
+    //åç¨‹åˆ‡æ¢åˆ°åå°ï¼Œå¹¶ä¸”è®¾ç½®ä¸ºHoldçŠ¶æ€
+    static void YieldToHold();
+    //æ€»åç¨‹æ•°
+    static uint64_t TotalFibers();
+
+    static void MainFunc();
+    static void CallerMainFunc();
+    static uint64_t GetFiberId();
+private:
+    uint64_t m_id = 0;
+    uint32_t m_stacksize = 0;
+    State m_state = INIT;
+
+    ucontext_t m_ctx;
+    void* m_stack = nullptr;
+
+    std::function<void()> m_cb;
+};
+
 }
 
-#endif //__SYLAR_FIBER_H
+#endif

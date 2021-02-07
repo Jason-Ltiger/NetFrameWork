@@ -1,108 +1,127 @@
 #ifndef __SYLAR_SCHEDULER_H__
-#define __SYLAR_SCHEDULER_H__ 
+#define __SYLAR_SCHEDULER_H__
+
 #include <memory>
+#include <vector>
+#include <list>
 #include "fiber.h"
 #include "thread.h"
 
 namespace sylar {
 
-    //将协程指定到指定的线程上去执行。
-    class Scheduler {
+class Scheduler {
+public:
+    typedef std::shared_ptr<Scheduler> ptr;
+    typedef Mutex MutexType;
 
-    public:
-        typedef std::shared_ptr<Scheduler> ptr;
-        typedef sylar::Mutex MutexType;
+    Scheduler(size_t threads = 1, bool use_caller = true, const std::string& name = "");
+    virtual ~Scheduler();
 
-    public:
-        //线程的大小，默认开启使用一个线程
-        //在哪里调用这个调度器，那么就把这个线程加入进来。
-        Scheduler(size_t threads = 1, bool use_caller = true, const std::string& name = "");
-        virtual ~Scheduler();
-    public:
-        static Scheduler* GetThis();
-        static Fiber* GetMainFiber();
-    
-    public:
-        void start();
-        void stop();
+    const std::string& getName() const { return m_name;}
 
-         template<class FiberOrCb>
-         void schedule(FiberOrCb fc, int thread = -1) {
-             bool need_tickle = false;
-             {
-                MutexType::Lock lock(m_mutex);
-                need_tickle = sheduleNoLock(fc,thread);
-             }
-             if (need_tickle) {
-                 tickie();
-             }
-         }
+    static Scheduler* GetThis();
+    static Fiber* GetMainFiber();
 
-         //批量放置FiberOrCb放入到容器中
-         template<class InputIterator>
-         void schedule(InputIterator begin, InputIterator end) {
-             bool need_tickle = false;
-             {
-                 while (begin!=end) {
-                     need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
-                     ++begin;
-                 }
-             }
-             if (need_tickle) {
-                 tickle();
-             }
-         }
+    void start();
+    void stop();
 
-    protected:
-        virtual void tickie();
-    private:
-        // 一个一个的把FiberOrCb放入到容器中
-        template<class FiberOrCb>
-        bool sheduleNoLock(FiberOrCb fc, int thread) {
-            bool need_tickie = m_fibers.empty();
-            FiberAndThread ft(fc, thread);
-            if (ft.fiber || ft.cb) {
-                m_fibers.push_back(ft);
-            }
-            return need_tickie;
-
+    //协程压入队列
+    template<class FiberOrCb>
+    void schedule(FiberOrCb fc, int thread = -1) {
+        bool need_tickle = false;
+        {
+            MutexType::Lock lock(m_mutex);
+            need_tickle = scheduleNoLock(fc, thread);
         }
 
-    private:
-        struct FiberAndThread {
+        if(need_tickle) {
+            tickle();
+        }
+    }
 
-            Fiber::ptr fiber;
-            std::function<void()> vb;
-            int32_t thread;
-            FiberAndThread(Fiber::ptr f, int32_t thr)\
-                :fiber(f), thread(thr){}
-            // 使用智能指针的指针。这样就能把智能swap之后减1.智能指针的智能指针就指向为空。
-            FiberAndThread(Fiber::ptr* f, int32_t thr)\
-                : thread(thr){
-                fiber.swap(*f);
+    template<class InputIterator>
+    void schedule(InputIterator begin, InputIterator end) {
+        bool need_tickle = false;
+        {
+            MutexType::Lock lock(m_mutex);
+            while(begin != end) {
+                need_tickle = scheduleNoLock(&*begin, -1) || need_tickle;
+                ++begin;
             }
-            FiberAndThread(std::function<void()> *f,int32_t thr)\
-                : thread(thr) {
-                vb.swap(*f);
-            }
-            FiberAndThread() :thread(-1) {};
+        }
+        if(need_tickle) {
+            tickle();
+        }
+    }
+protected:
+    virtual void tickle();
+    void run();
+    virtual bool stopping();
+    virtual void idle();
 
-            void reset() {
-                thread = -1;
-                vb = nullptr;
-                fiber = nullptr;
-            }
+    void setThis();
 
-        };
-    private:
-        MutexType m_mutex;
-        std::vector<sylar::Thread::ptr> m_threads;
-        const std::string m_name;
-        std::list <FiberAndThread> m_fibers;
+    bool hasIdleThreads() { return m_idleThreadCount > 0;}
+private:
+    template<class FiberOrCb>
+    bool scheduleNoLock(FiberOrCb fc, int thread) {
+        bool need_tickle = m_fibers.empty();
+        FiberAndThread ft(fc, thread);
+        if(ft.fiber || ft.cb) {
+            m_fibers.push_back(ft);
+        }
+        return need_tickle;
+    }
+private:
+    struct FiberAndThread {
+        Fiber::ptr fiber;
+        std::function<void()> cb;
+        int thread;
 
+        FiberAndThread(Fiber::ptr f, int thr)
+            :fiber(f), thread(thr) {
+        }
+
+        FiberAndThread(Fiber::ptr* f, int thr)
+            :thread(thr) {
+            fiber.swap(*f);
+        }
+
+        FiberAndThread(std::function<void()> f, int thr)
+            :cb(f), thread(thr) {
+        }
+
+        FiberAndThread(std::function<void()>* f, int thr)
+            :thread(thr) {
+            cb.swap(*f);
+        }
+
+        FiberAndThread()
+            :thread(-1) {
+        }
+
+        void reset() {
+            fiber = nullptr;
+            cb = nullptr;
+            thread = -1;
+        }
     };
+private:
+    MutexType m_mutex;
+    std::vector<Thread::ptr> m_threads;
+    std::list<FiberAndThread> m_fibers;
+    Fiber::ptr m_rootFiber;
+    std::string m_name;
+protected:
+    std::vector<int> m_threadIds;
+    size_t m_threadCount = 0;
+    std::atomic<size_t> m_activeThreadCount = {0};
+    std::atomic<size_t> m_idleThreadCount = {0};
+    bool m_stopping = true;
+    bool m_autoStop = false;
+    int m_rootThread = 0;
+};
 
 }
 
-
-#endif//__SYLAR_SCHEDULER_H__
+#endif
