@@ -14,7 +14,7 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
     SYLAR_ASSERT(threads > 0);
 
     if(use_caller) {
-        //Æô¶¯Ïß³Ì»á×÷ÎªÖ´ĞĞÏß³Ì£¬ËùÒÔÉèÖÃÖ´ĞĞÈë¿ÚrootĞ­³Ì¡£
+        //å¯åŠ¨çº¿ç¨‹ä¼šä½œä¸ºæ‰§è¡Œçº¿ç¨‹ï¼Œæ‰€ä»¥è®¾ç½®æ”¶é›†root_fiberçš„å­åç¨‹ã€‚
         sylar::Fiber::GetThis();
         --threads;
 
@@ -45,7 +45,7 @@ Scheduler* Scheduler::GetThis() {
 }
 
 Fiber* Scheduler::GetMainFiber() {
-    //Ö÷Ğ­³Ì
+    //ä¸»åç¨‹
     return t_fiber;
 }
 
@@ -74,20 +74,20 @@ void Scheduler::start() {
 
 void Scheduler::stop() {
     m_autoStop = true;
-    //ÅĞ¶ÏÊÇ²»ÊÇuser_callerµÄÏß³Ì£¬²¢ÇÒÏß³ÌÖ»ÓĞÒ»¸ö
+    //åˆ¤æ–­æ˜¯ä¸æ˜¯user_callerçš„çº¿ç¨‹ï¼Œå¹¶ä¸”çº¿ç¨‹åªæœ‰ä¸€ä¸ª
     if(m_rootFiber
             && m_threadCount == 0
             && (m_rootFiber->getState() == Fiber::TERM
                 || m_rootFiber->getState() == Fiber::INIT)) {
         SYLAR_LOG_INFO(g_logger) << this << " stopped";
         m_stopping = true;
-
+        //æ—¢æ˜¯rootFiberåç¨‹ï¼Œ æ¶ˆæ¯é˜Ÿåˆ—çš„å¤„ç†åç¨‹æ˜¯ç©ºçš„ï¼Œç›´æ¥return
         if(stopping()) {
             return;
         }
     }
 
-    //ÅĞ¶ÏÊÇ²»ÊÇuser_callerÏß³Ì¡£
+    //åˆ¤æ–­æ˜¯ä¸æ˜¯user_callerçº¿ç¨‹ã€‚
     //bool exit_on_this_fiber = false;
     if(m_rootThread != -1) {
         SYLAR_ASSERT(GetThis() == this);
@@ -95,7 +95,7 @@ void Scheduler::stop() {
         SYLAR_ASSERT(GetThis() != this);
     }
 
-    //»½ĞÑÏß³Ì ÍË³ö
+    //å”¤é†’çº¿ç¨‹é€€å‡º
     m_stopping = true;
     for(size_t i = 0; i < m_threadCount; ++i) {
         tickle();
@@ -104,7 +104,7 @@ void Scheduler::stop() {
     if(m_rootFiber) {
         tickle();
     }
-
+    // å­˜åœ¨rootFiberåç¨‹ï¼Œå¹¶ä¸”è¿˜æœ‰æ²¡å¤„ç†å®Œçš„åç¨‹ï¼Œè¿™é‡Œå…ˆè½¬å…¥å¤„ç†æœªå¤„ç†çš„åç¨‹ã€‚
     if(m_rootFiber) {
         //while(!stopping()) {
         //    if(m_rootFiber->getState() == Fiber::TERM
@@ -116,10 +116,14 @@ void Scheduler::stop() {
         //    m_rootFiber->call();
         //}
         if(!stopping()) {
+            //å›æ”¶æ‰€æœ‰çš„åç¨‹å­ä»»åŠ¡ï¼Œç›´åˆ°ç›´åˆ°é€€å‡ºã€‚è¿™é‡Œå†™çš„å¾ˆå·§å¦™
+            //root_fiberå¯ç”¨æ¥å¤„ç†å›æ”¶å­åç¨‹
+            //æ”¾åˆ°è¿™é‡Œå»å¯åŠ¨æ˜¯æœ‰åŸå› çš„ï¼Œé˜²æ­¢å½“å‰çº¿ç¨‹æ²¡æœ‰æœºä¼šstopäº†ï¼Œè¿™æ ·è™½ç„¶startä¸èƒ½å¤„ç†åç¨‹å­ä»»åŠ¡çš„è°ƒåº¦
+            //ä½†æ˜¯å´åšåˆ°äº†stopæ‰§è¡Œã€‚
             m_rootFiber->call();
         }
     }
-    //»ØÊÕÏß³Ì
+    //å›æ”¶çº¿ç¨‹
     std::vector<Thread::ptr> thrs;
     {
         MutexType::Lock lock(m_mutex);
@@ -140,13 +144,13 @@ void Scheduler::setThis() {
 void Scheduler::run() {
     SYLAR_LOG_INFO(g_logger) << "run";
     setThis();
-    //µ±²»ÊÇuserÏß³ÌÖ´ĞĞÊ±£¬È¡³öµ±Ç°Ïß³Ìmainfiber
+    //å½“ä¸æ˜¯userçº¿ç¨‹æ‰§è¡Œæ—¶ï¼Œå–å‡ºå½“å‰çº¿ç¨‹mainfiber
     if(sylar::GetThreadId() != m_rootThread) {
         t_fiber = Fiber::GetThis().get();
     }
-    //¿ÕÏĞĞ­³Ì
+    //ç©ºé—²åç¨‹
     Fiber::ptr idle_fiber(new Fiber(std::bind(&Scheduler::idle, this)));
-    //Ö´ĞĞĞ­³Ì
+    //æ‰§è¡Œåç¨‹
     Fiber::ptr cb_fiber;
 
     FiberAndThread ft;
@@ -158,7 +162,7 @@ void Scheduler::run() {
             MutexType::Lock lock(m_mutex);
             auto it = m_fibers.begin();
             while(it != m_fibers.end()) {
-                // ÅĞ¶ÏÊÇ²»ÊÇµ±Ç°µ÷ÓÃÖ¸¶¨Ïß³ÌÈ¥´¦ÀíµÄĞ­³Ì// Èç¹ûÊÇ-1ÄÇÃ´¾ÍËæ»úÏß³ÌÈ¥Ö´ĞĞ
+                // åˆ¤æ–­æ˜¯ä¸æ˜¯å½“å‰è°ƒç”¨æŒ‡å®šçº¿ç¨‹å»å¤„ç†çš„åç¨‹// å¦‚æœæ˜¯-1é‚£ä¹ˆå°±éšæœºçº¿ç¨‹å»æ‰§è¡Œ
                 if(it->thread != -1 && it->thread != sylar::GetThreadId()) {
                     ++it;
                     tickle_me = true;
@@ -178,34 +182,34 @@ void Scheduler::run() {
                 break;
             }
         }
-        //Í¨ÖªÆäËûÏß³Ì£¬µ±Ç°¶ÓÁĞÖĞÓĞĞ­³ÌĞèÒª´¦Àí
+        //é€šçŸ¥å…¶ä»–çº¿ç¨‹ï¼Œå½“å‰é˜Ÿåˆ—ä¸­æœ‰åç¨‹éœ€è¦å¤„ç†
         if(tickle_me) {
             tickle();
         }
-        //È¡³öµ±Ç°µÄft £¬ÅĞ¶ÏÊÇfunction ÄÜÓÃ£¬»¹ÊÇfiberÄÜÓÃ£¬Í¬Ê±ÅĞ¶Ï×´Ì¬¡£
+        //å–å‡ºå½“å‰çš„ft ï¼Œåˆ¤æ–­æ˜¯function èƒ½ç”¨ï¼Œè¿˜æ˜¯fiberèƒ½ç”¨ï¼ŒåŒæ—¶åˆ¤æ–­çŠ¶æ€ã€‚
         if(ft.fiber && (ft.fiber->getState() != Fiber::TERM
                         && ft.fiber->getState() != Fiber::EXCEPT)) {
-            //±£´æÖ÷Ğ­³Ì£¬Ìø×ªÖ´ĞĞĞ­³Ì
+            //ä¿å­˜ä¸»åç¨‹ï¼Œè·³è½¬æ‰§è¡Œåç¨‹
             ft.fiber->swapIn();
-            //Ö´ĞĞÍê±Ï£¬»î¶¯Ïß³Ì--1
+            //æ‰§è¡Œå®Œæ¯•ï¼Œæ´»åŠ¨çº¿ç¨‹--1
             --m_activeThreadCount;
-            //ÅĞ¶ÏÖ´ĞĞĞ­³Ì»¹ÊÇ²»ÊÇ¾ÍĞ÷Ì¬£¬ÊÇµÄ»°£¬¼ÌĞø¼ÓÈëµ½¶ÓÁĞµ±ÖĞ¡£
+            //åˆ¤æ–­æ‰§è¡Œåç¨‹è¿˜æ˜¯ä¸æ˜¯å°±ç»ªæ€ï¼Œæ˜¯çš„è¯ï¼Œç»§ç»­åŠ å…¥åˆ°é˜Ÿåˆ—å½“ä¸­ã€‚
             if(ft.fiber->getState() == Fiber::READY) {
                 schedule(ft.fiber);
             } else if(ft.fiber->getState() != Fiber::TERM
                     && ft.fiber->getState() != Fiber::EXCEPT) {
-                //¹ÒÆğµ±Ç°Ğ­³Ì
+                //æŒ‚èµ·å½“å‰åç¨‹
                 ft.fiber->m_state = Fiber::HOLD;
             }
-            //Çå¿Õµ±Ç°µÄft
+            //æ¸…ç©ºå½“å‰çš„ft
             ft.reset();
         } else if(ft.cb) {
-            //ÅĞ¶ÏftµÄcbÖ´ĞĞ£¬ÏÈ°ÑÕâ¸öfunction ÏÈ×ªÎªĞ­³Ì¡£
+            //åˆ¤æ–­ftçš„cbæ‰§è¡Œï¼Œå…ˆæŠŠè¿™ä¸ªfunction å…ˆè½¬ä¸ºåç¨‹ã€‚
             if(cb_fiber) {
-                //ÖØĞÂÊ¹ÓÃÕâ¸öĞ­³Ì
+                //é‡æ–°ä½¿ç”¨è¿™ä¸ªåç¨‹
                 cb_fiber->reset(ft.cb);
             } else {
-                //´´½¨ĞÂµÄĞ­³Ì
+                //åˆ›å»ºæ–°çš„åç¨‹
                 cb_fiber.reset(new Fiber(ft.cb));
             }
             ft.reset();

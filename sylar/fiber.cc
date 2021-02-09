@@ -55,8 +55,9 @@ namespace sylar {
         :m_id(++s_fiber_id)
         , m_cb(cb) {
         ++s_fiber_count;
-        m_stacksize = stacksize ? stacksize : g_fiber_stack_size->getValue();
-
+        //m_stacksize = stacksize ? stacksize : g_fiber_stack_size->getValue();
+        m_stacksize = stacksize ? stacksize : 1024 * 1024;
+        
         m_stack = StackAllocator::Alloc(m_stacksize);
         if (getcontext(&m_ctx)) {
             SYLAR_ASSERT2(false, "getcontext");

@@ -93,6 +93,7 @@ void IOManager::contextResize(size_t size) {
 int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     FdContext* fd_ctx = nullptr;
     RWMutexType::ReadLock lock(m_mutex);
+    //扩充容器的体积
     if((int)m_fdContexts.size() > fd) {
         fd_ctx = m_fdContexts[fd];
         lock.unlock();
@@ -102,20 +103,21 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
         contextResize(fd * 1.5);
         fd_ctx = m_fdContexts[fd];
     }
-
+    // 操作这个fd之前加锁，防止多线程侵扰。
     FdContext::MutexType::Lock lock2(fd_ctx->mutex);
+    //当前加入的读写事件与fd之中的events重复
     if(fd_ctx->events & event) {
         SYLAR_LOG_ERROR(g_logger) << "addEvent assert fd=" << fd
                     << " event=" << event
                     << " fd_ctx.event=" << fd_ctx->events;
         SYLAR_ASSERT(!(fd_ctx->events & event));
     }
-
+    //如果不重复，直接判断加入事件的行为是添加还是修改
     int op = fd_ctx->events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
     epoll_event epevent;
-    epevent.events = EPOLLET | fd_ctx->events | event;
+    epevent.events = EPOLLET | fd_ctx->events | event;  //决定fd的行为是脉冲触发，读写事件。这里读写事件与epoll的事件同时对应。
     epevent.data.ptr = fd_ctx;
-
+    //添加到红黑树上
     int rt = epoll_ctl(m_epfd, op, fd, &epevent);
     if(rt) {
         SYLAR_LOG_ERROR(g_logger) << "epoll_ctl(" << m_epfd << ", "
@@ -125,7 +127,7 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     }
 
     ++m_pendingEventCount;
-    fd_ctx->events = (Event)(fd_ctx->events | event);
+    fd_ctx->events = (Event)(fd_ctx->events | event);              // 读写行为存到fd_ctx当中
     FdContext::EventContext& event_ctx = fd_ctx->getContext(event);
     SYLAR_ASSERT(!event_ctx.scheduler
                 && !event_ctx.fiber
