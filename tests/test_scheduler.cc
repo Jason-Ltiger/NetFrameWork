@@ -63,13 +63,27 @@ void test_fiber() {
     sleep(1);
 }
 
+#include <iostream>
+#include <memory>
+class A {
+public:
+    A() { std::cout << "A construct" << std::endl; };
+    ~A() { std::cout << "A destruct" << std::endl; };
+};
 
-
-//test 2  创建多个线程去执行。
-int main(int argc, char** argv) {
-    sylar::Scheduler sc(3);
-    sc.start();
-    sc.schedule(&test_fiber);
-    sc.stop();
+int main() {
+    {
+        std::cout << ~0ull << std::endl;
+        std::cout << 0ull << std::endl;
+    }
     return 0;
 }
+
+//test 2  创建多个线程去执行。
+//int main(int argc, char** argv) {
+//    sylar::Scheduler sc(3);
+//    sc.start();
+//    sc.schedule(&test_fiber);
+//    sc.stop();
+//    return 0;
+//}
