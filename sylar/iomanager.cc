@@ -46,10 +46,10 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string& name)
     :Scheduler(threads, use_caller, name) {
     m_epfd = epoll_create(5000);
     SYLAR_ASSERT(m_epfd > 0);
-    //´´½¨¹ÜµÀ
+    //åˆ›å»ºç®¡é“
     int rt = pipe(m_tickleFds);
     SYLAR_ASSERT(!rt);
-    //´´½¨eventÊÂ¼ş¡£
+    //åˆ›å»ºeventäº‹ä»¶ã€‚
     epoll_event event;
     memset(&event, 0, sizeof(epoll_event));
     event.events = EPOLLIN | EPOLLET;
@@ -58,12 +58,12 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string& name)
     rt = fcntl(m_tickleFds[0], F_SETFL, O_NONBLOCK);
     SYLAR_ASSERT(!rt);
 
-    //¼àÌıµÄÊÇ¹ÜµÀµÄ¶ÁÌ×½Ó×Ö
+    //ç›‘å¬çš„æ˜¯ç®¡é“çš„è¯»å¥—æ¥å­—
     rt = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     SYLAR_ASSERT(!rt);
-    //µ÷ÕûfdcontextµÄ³õÊ¼Öµ´óĞ¡
+    //è°ƒæ•´fdcontextçš„åˆå§‹å€¼å¤§å°
     contextResize(32);
-    //¿ªÆô
+    //å¼€å¯
     start();
 }
 
@@ -94,7 +94,7 @@ void IOManager::contextResize(size_t size) {
 int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     FdContext* fd_ctx = nullptr;
     RWMutexType::ReadLock lock(m_mutex);
-    //À©³äÈİÆ÷µÄÌå»ı
+    //æ‰©å……å®¹å™¨çš„ä½“ç§¯
     if((int)m_fdContexts.size() > fd) {
         fd_ctx = m_fdContexts[fd];
         lock.unlock();
@@ -104,21 +104,21 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
         contextResize(fd * 1.5);
         fd_ctx = m_fdContexts[fd];
     }
-    // ²Ù×÷Õâ¸öfdÖ®Ç°¼ÓËø£¬·ÀÖ¹¶àÏß³ÌÇÖÈÅ¡£
+    // æ“ä½œè¿™ä¸ªfdä¹‹å‰åŠ é”ï¼Œé˜²æ­¢å¤šçº¿ç¨‹ä¾µæ‰°ã€‚
     FdContext::MutexType::Lock lock2(fd_ctx->mutex);
-    //µ±Ç°¼ÓÈëµÄ¶ÁĞ´ÊÂ¼şÓëfdÖ®ÖĞµÄeventsÖØ¸´
+    //å½“å‰åŠ å…¥çš„è¯»å†™äº‹ä»¶ä¸fdä¹‹ä¸­çš„eventsé‡å¤
     if(fd_ctx->events & event) {
         SYLAR_LOG_ERROR(g_logger) << "addEvent assert fd=" << fd
                     << " event=" << event
                     << " fd_ctx.event=" << fd_ctx->events;
         SYLAR_ASSERT(!(fd_ctx->events & event));
     }
-    //Èç¹û²»ÖØ¸´£¬Ö±½ÓÅĞ¶Ï¼ÓÈëÊÂ¼şµÄĞĞÎªÊÇÌí¼Ó»¹ÊÇĞŞ¸Ä
+    //å¦‚æœä¸é‡å¤ï¼Œç›´æ¥åˆ¤æ–­åŠ å…¥äº‹ä»¶çš„è¡Œä¸ºæ˜¯æ·»åŠ è¿˜æ˜¯ä¿®æ”¹
     int op = fd_ctx->events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
     epoll_event epevent;
-    epevent.events = EPOLLET | fd_ctx->events | event;  //¾ö¶¨fdµÄĞĞÎªÊÇÂö³å´¥·¢£¬¶ÁĞ´ÊÂ¼ş¡£ÕâÀï¶ÁĞ´ÊÂ¼şÓëepollµÄÊÂ¼şÍ¬Ê±¶ÔÓ¦¡£
+    epevent.events = EPOLLET | fd_ctx->events | event;  //å†³å®šfdçš„è¡Œä¸ºæ˜¯è„‰å†²è§¦å‘ï¼Œè¯»å†™äº‹ä»¶ã€‚è¿™é‡Œè¯»å†™äº‹ä»¶ä¸epollçš„äº‹ä»¶åŒæ—¶å¯¹åº”ã€‚
     epevent.data.ptr = fd_ctx;
-    //Ìí¼Óµ½ºìºÚÊ÷ÉÏ
+    //æ·»åŠ åˆ°çº¢é»‘æ ‘ä¸Š
     int rt = epoll_ctl(m_epfd, op, fd, &epevent);
     if(rt) {
         SYLAR_LOG_ERROR(g_logger) << "epoll_ctl(" << m_epfd << ", "
@@ -128,10 +128,10 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     }
 
     ++m_pendingEventCount;
-    fd_ctx->events = (Event)(fd_ctx->events | event);              // ¶ÁĞ´ĞĞÎª´æµ½fd_ctxµ±ÖĞ
+    fd_ctx->events = (Event)(fd_ctx->events | event);              // è¯»å†™è¡Œä¸ºå­˜åˆ°fd_ctxå½“ä¸­
     FdContext::EventContext& event_ctx = fd_ctx->getContext(event);
 
-    //¶Ôfd_ctx¸³Öµ»Øµ÷º¯Êı¼°´¦ÀíµÄµ÷¶ÈÆ÷
+    //å¯¹fd_ctxèµ‹å€¼å›è°ƒå‡½æ•°åŠå¤„ç†çš„è°ƒåº¦å™¨
     SYLAR_ASSERT(!event_ctx.scheduler
                 && !event_ctx.fiber
                 && !event_ctx.cb);
@@ -275,7 +275,7 @@ bool IOManager::stopping() {
     uint64_t timeout = 0;
     return stopping(timeout);
 }
-//¿ÕÏĞµÄidleÖ´ĞĞÁ÷³Ì
+//ç©ºé—²çš„idleæ‰§è¡Œæµç¨‹
 void IOManager::idle() {
     epoll_event* events = new epoll_event[64]();
     std::shared_ptr<epoll_event> shared_events(events, [](epoll_event* ptr){
@@ -283,7 +283,7 @@ void IOManager::idle() {
     });
 
     while(true) {
-        uint64_t next_timeout = 0;
+        uint64_t next_timeout = 0; 
         if(stopping(next_timeout)) {
             SYLAR_LOG_INFO(g_logger) << "name=" << getName()
                                      << " idle stopping exit";
@@ -299,7 +299,7 @@ void IOManager::idle() {
             } else {
                 next_timeout = MAX_TIMEOUT;
             }
-            //timeoutµ½Ê±¼äÖ®ºó£¬¿ÉÄÜ»á·µ»Ø0.
+            //timeoutåˆ°æ—¶é—´ä¹‹åï¼Œå¯èƒ½ä¼šè¿”å›0.
             rt = epoll_wait(m_epfd, events, 64, (int)next_timeout);
             if(rt < 0 && errno == EINTR) {
             } else {
@@ -314,12 +314,12 @@ void IOManager::idle() {
             schedule(cbs.begin(), cbs.end());
             cbs.clear();
         }
-        //Ñ­»·Ã¿¸öÊÂ¼şµÄÊı¾İ
+        //å¾ªç¯æ¯ä¸ªäº‹ä»¶çš„æ•°æ®
         for(int i = 0; i < rt; ++i) {
             epoll_event& event = events[i];
             if(event.data.fd == m_tickleFds[0]) {
                 uint8_t dummy;
-                //½«Êı¾İ¶ÁÈ¡¸É¾»
+                //å°†æ•°æ®è¯»å–å¹²å‡€
                 while(read(m_tickleFds[0], &dummy, 1) == 1);
                 continue;
             }
@@ -340,7 +340,7 @@ void IOManager::idle() {
             if((fd_ctx->events & real_events) == NONE) {
                 continue;
             }
-            //Ö»Ìí¼ÓÊ£ÓàµÄÊÂ¼ş´¦Àí¡£
+            //åªæ·»åŠ å‰©ä½™çš„äº‹ä»¶å¤„ç†ã€‚
             int left_events = (fd_ctx->events & ~real_events);
             int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
             event.events = EPOLLET | left_events;
