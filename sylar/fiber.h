@@ -15,24 +15,18 @@ public:
     typedef std::shared_ptr<Fiber> ptr;
 
     enum State {
-        //初始态
         INIT,
-        //挂起态
         HOLD,
-        //执行态
         EXEC,
-        //终止态
         TERM,
-        //就绪态
         READY,
-        //异常态
         EXCEPT
     };
 private:
     Fiber();
 
 public:
-    Fiber(std::function<void()> cb, size_t stacksize = 1024 * 1024, bool use_caller = false);
+    Fiber(std::function<void()> cb, size_t stacksize = 0, bool use_caller = false);
     ~Fiber();
 
     //重置协程函数，并重置状态

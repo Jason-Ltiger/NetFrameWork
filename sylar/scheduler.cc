@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "log.h"
 #include "macro.h"
+#include "hook.h"
 
 namespace sylar {
 
@@ -14,7 +15,6 @@ Scheduler::Scheduler(size_t threads, bool use_caller, const std::string& name)
     SYLAR_ASSERT(threads > 0);
 
     if(use_caller) {
-        //启动线程会作为执行线程，所以设置收集root_fiber的子协程。
         sylar::Fiber::GetThis();
         --threads;
 
@@ -45,7 +45,6 @@ Scheduler* Scheduler::GetThis() {
 }
 
 Fiber* Scheduler::GetMainFiber() {
-    //主协程
     return t_fiber;
 }
 
@@ -74,20 +73,18 @@ void Scheduler::start() {
 
 void Scheduler::stop() {
     m_autoStop = true;
-    //判断是不是user_caller的线程，并且线程只有一个
     if(m_rootFiber
             && m_threadCount == 0
             && (m_rootFiber->getState() == Fiber::TERM
                 || m_rootFiber->getState() == Fiber::INIT)) {
         SYLAR_LOG_INFO(g_logger) << this << " stopped";
         m_stopping = true;
-        //既是rootFiber协程， 消息队列的处理协程是空的，直接return
+
         if(stopping()) {
             return;
         }
     }
 
-    //判断是不是user_caller线程。
     //bool exit_on_this_fiber = false;
     if(m_rootThread != -1) {
         SYLAR_ASSERT(GetThis() == this);
@@ -95,7 +92,6 @@ void Scheduler::stop() {
         SYLAR_ASSERT(GetThis() != this);
     }
 
-    //唤醒线程退出
     m_stopping = true;
     for(size_t i = 0; i < m_threadCount; ++i) {
         tickle();
@@ -104,7 +100,7 @@ void Scheduler::stop() {
     if(m_rootFiber) {
         tickle();
     }
-    // 存在rootFiber协程，并且还有没处理完的协程，这里先转入处理未处理的协程。
+
     if(m_rootFiber) {
         //while(!stopping()) {
         //    if(m_rootFiber->getState() == Fiber::TERM
@@ -116,14 +112,10 @@ void Scheduler::stop() {
         //    m_rootFiber->call();
         //}
         if(!stopping()) {
-            //回收所有的协程子任务，直到直到退出。这里写的很巧妙
-            //root_fiber可用来处理回收子协程
-            //放到这里去启动是有原因的，防止当前线程没有机会stop了，这样虽然start不能处理协程子任务的调度
-            //但是却做到了stop执行。
             m_rootFiber->call();
         }
     }
-    //回收线程
+
     std::vector<Thread::ptr> thrs;
     {
         MutexType::Lock lock(m_mutex);
@@ -143,14 +135,13 @@ void Scheduler::setThis() {
 
 void Scheduler::run() {
     SYLAR_LOG_INFO(g_logger) << "run";
+    set_hook_enable(true);
     setThis();
-    //当不是user线程执行时，取出当前线程mainfiber
     if(sylar::GetThreadId() != m_rootThread) {
         t_fiber = Fiber::GetThis().get();
     }
-    //空闲协程
+
     Fiber::ptr idle_fiber(new Fiber(std::bind(&Scheduler::idle, this)));
-    //执行协程
     Fiber::ptr cb_fiber;
 
     FiberAndThread ft;
@@ -162,7 +153,6 @@ void Scheduler::run() {
             MutexType::Lock lock(m_mutex);
             auto it = m_fibers.begin();
             while(it != m_fibers.end()) {
-                // 判断是不是当前调用指定线程去处理的协程// 如果是-1那么就随机线程去执行
                 if(it->thread != -1 && it->thread != sylar::GetThreadId()) {
                     ++it;
                     tickle_me = true;
@@ -182,34 +172,27 @@ void Scheduler::run() {
                 break;
             }
         }
-        //通知其他线程，当前队列中有协程需要处理
+
         if(tickle_me) {
             tickle();
         }
-        //取出当前的ft ，判断是function 能用，还是fiber能用，同时判断状态。
+
         if(ft.fiber && (ft.fiber->getState() != Fiber::TERM
                         && ft.fiber->getState() != Fiber::EXCEPT)) {
-            //保存主协程，跳转执行协程
             ft.fiber->swapIn();
-            //执行完毕，活动线程--1
             --m_activeThreadCount;
-            //判断执行协程还是不是就绪态，是的话，继续加入到队列当中。
+
             if(ft.fiber->getState() == Fiber::READY) {
                 schedule(ft.fiber);
             } else if(ft.fiber->getState() != Fiber::TERM
                     && ft.fiber->getState() != Fiber::EXCEPT) {
-                //挂起当前协程
                 ft.fiber->m_state = Fiber::HOLD;
             }
-            //清空当前的ft
             ft.reset();
         } else if(ft.cb) {
-            //判断ft的cb执行，先把这个function 先转为协程。
             if(cb_fiber) {
-                //重新使用这个协程
                 cb_fiber->reset(ft.cb);
             } else {
-                //创建新的协程
                 cb_fiber.reset(new Fiber(ft.cb));
             }
             ft.reset();

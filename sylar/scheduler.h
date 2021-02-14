@@ -25,7 +25,6 @@ public:
     void start();
     void stop();
 
-    //协程压入队列
     template<class FiberOrCb>
     void schedule(FiberOrCb fc, int thread = -1) {
         bool need_tickle = false;

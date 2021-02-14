@@ -70,8 +70,8 @@ void test_timer() {
 }
 
 int main(int argc, char** argv) {
-    test1();
-    //test_timer();
+    //test1();
+    test_timer();
     return 0;
 }
 
