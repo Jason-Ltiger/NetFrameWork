@@ -306,7 +306,7 @@ void IOManager::idle() {
                 break;
             }
         } while(true);
-
+        //取出定时器任务，执行到期的任务
         std::vector<std::function<void()> > cbs;
         listExpiredCb(cbs);
         if(!cbs.empty()) {
@@ -317,13 +317,14 @@ void IOManager::idle() {
         //循环每个事件的数据
         for(int i = 0; i < rt; ++i) {
             epoll_event& event = events[i];
+            //先判断管道fd是否存在
             if(event.data.fd == m_tickleFds[0]) {
                 uint8_t dummy;
                 //将数据读取干净
                 while(read(m_tickleFds[0], &dummy, 1) == 1);
                 continue;
             }
-
+            //发生断开连接之后，摘除这个fd，处理这个fd的缓冲区数据操作
             FdContext* fd_ctx = (FdContext*)event.data.ptr;
             FdContext::MutexType::Lock lock(fd_ctx->mutex);
             if(event.events & (EPOLLERR | EPOLLHUP)) {
@@ -362,7 +363,7 @@ void IOManager::idle() {
                 --m_pendingEventCount;
             }
         }
-
+        //清楚引用计数
         Fiber::ptr cur = Fiber::GetThis();
         auto raw_ptr = cur.get();
         cur.reset();
