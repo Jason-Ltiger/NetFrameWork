@@ -103,7 +103,7 @@ Timer::ptr TimerManager::addTimer(uint64_t ms, std::function<void()> cb
     addTimer(timer, lock);
     return timer;
 }
-
+//监控条件是否发生，然后执行相应的定时器
 static void OnTimer(std::weak_ptr<void> weak_cond, std::function<void()> cb) {
     std::shared_ptr<void> tmp = weak_cond.lock();
     if(tmp) {
@@ -121,14 +121,17 @@ uint64_t TimerManager::getNextTimer() {
     RWMutexType::ReadLock lock(m_mutex);
     m_tickled = false;
     if(m_timers.empty()) {
+        //返回一个最大的数值
         return ~0ull;
     }
 
     const Timer::ptr& next = *m_timers.begin();
     uint64_t now_ms = sylar::GetCurrentMS();
     if(now_ms >= next->m_next) {
+        //达到执行时间，还未执行
         return 0;
     } else {
+        //还未到执行时间
         return next->m_next - now_ms;
     }
 }

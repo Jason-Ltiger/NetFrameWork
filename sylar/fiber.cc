@@ -48,7 +48,7 @@ namespace sylar {
 
         ++s_fiber_count;
 
-        SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber";
+        //SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber";
     }
 
     Fiber::Fiber(std::function<void()> cb, size_t stacksize, bool use_caller)
@@ -73,7 +73,7 @@ namespace sylar {
             makecontext(&m_ctx, &Fiber::CallerMainFunc, 0);
         }
 
-        SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber id=" << m_id;
+        //SYLAR_LOG_DEBUG(g_logger) << "Fiber::Fiber id=" << m_id;
     }
 
     Fiber::~Fiber() {
@@ -94,7 +94,7 @@ namespace sylar {
                 SetThis(nullptr);
             }
         }
-        SYLAR_LOG_DEBUG(g_logger) << "Fiber::~Fiber id=" << m_id;
+        //SYLAR_LOG_DEBUG(g_logger) << "Fiber::~Fiber id=" << m_id;
     }
 
     //重置协程函数，并重置状态

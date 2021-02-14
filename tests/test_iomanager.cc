@@ -58,7 +58,7 @@ void test1() {
 
 sylar::Timer::ptr s_timer;
 void test_timer() {
-    sylar::IOManager iom(2);
+    sylar::IOManager iom(1);
     s_timer = iom.addTimer(1000, [](){
         static int i = 0;
         SYLAR_LOG_INFO(g_logger) << "hello timer i=" << i;
@@ -68,10 +68,25 @@ void test_timer() {
         }
     }, true);
 }
+extern "C" {
+
+typedef unsigned int (* sleepfun)(unsigned int seconds);
+
+}
+unsigned int call (unsigned int seconds){
+    std::cout << "call"<<std::endl;
+    return 0;
+}
+
+
+
 
 int main(int argc, char** argv) {
-    test1();
+    //test1();
     //test_timer();
+    sleepfun s_call = call;
+    s_call(1);
+    std::cout << "main hello world"<<std::endl;
     return 0;
 }
 
