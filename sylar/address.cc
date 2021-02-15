@@ -3,6 +3,7 @@
 #include <sstream>
 #include <netdb.h>
 #include <ifaddrs.h>
+#include <stddef.h>
 
 #include "endian.h"
 

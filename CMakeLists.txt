@@ -21,6 +21,11 @@ set(LIB_SRC
     sylar/scheduler.cc
     sylar/iomanager.cc
     sylar/timer.cc
+    sylar/address.cc
+    sylar/bytearray.cc
+    sylar/fd_manager.cc
+    sylar/hook.cc
+    sylar/socket.cc
     )
 
 add_library(sylar SHARED ${LIB_SRC})
@@ -28,7 +33,7 @@ force_redefine_file_macro_for_sources(sylar) #__FILE__
 #add_library(sylar_static STATIC ${LIB_SRC})
 #SET_TARGET_PROPERTIES (sylar_static PROPERTIES OUTPUT_NAME "sylar")
 
-set(LIBS sylar pthread libyaml-cpp_static.a)
+set(LIBS sylar pthread libyaml-cpp_static.a dl)
 
 add_executable(test tests/test.cc)
 add_dependencies(test sylar)
@@ -68,6 +73,10 @@ force_redefine_file_macro_for_sources(test_iomanager) #__FILE__
 target_link_libraries(test_iomanager ${LIBS})
 
 
+add_executable(test_hook tests/test_hook.cc)
+add_dependencies(test_hook sylar)
+force_redefine_file_macro_for_sources(test_hook) #__FILE__
+target_link_libraries(test_hook ${LIBS})
 
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
