@@ -83,10 +83,14 @@ unsigned int call (unsigned int seconds){
 
 int main(int argc, char** argv) {
     //test1();
+<<<<<<< HEAD
     //test_timer();
     sleepfun s_call = call;
     s_call(1);
     std::cout << "main hello world"<<std::endl;
+=======
+    test_timer();
+>>>>>>> f4ffd8f6a9edf51febcc35fadf3649a9c9b5bda3
     return 0;
 }
 

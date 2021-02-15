@@ -46,10 +46,10 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string& name)
     :Scheduler(threads, use_caller, name) {
     m_epfd = epoll_create(5000);
     SYLAR_ASSERT(m_epfd > 0);
-    //创建管道
+
     int rt = pipe(m_tickleFds);
     SYLAR_ASSERT(!rt);
-    //创建event事件。
+
     epoll_event event;
     memset(&event, 0, sizeof(epoll_event));
     event.events = EPOLLIN | EPOLLET;
@@ -58,12 +58,11 @@ IOManager::IOManager(size_t threads, bool use_caller, const std::string& name)
     rt = fcntl(m_tickleFds[0], F_SETFL, O_NONBLOCK);
     SYLAR_ASSERT(!rt);
 
-    //监听的是管道的读套接字
     rt = epoll_ctl(m_epfd, EPOLL_CTL_ADD, m_tickleFds[0], &event);
     SYLAR_ASSERT(!rt);
-    //调整fdcontext的初始值大小
+
     contextResize(32);
-    //开启
+
     start();
 }
 
@@ -94,7 +93,6 @@ void IOManager::contextResize(size_t size) {
 int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     FdContext* fd_ctx = nullptr;
     RWMutexType::ReadLock lock(m_mutex);
-    //扩充容器的体积
     if((int)m_fdContexts.size() > fd) {
         fd_ctx = m_fdContexts[fd];
         lock.unlock();
@@ -104,21 +102,20 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
         contextResize(fd * 1.5);
         fd_ctx = m_fdContexts[fd];
     }
-    // 操作这个fd之前加锁，防止多线程侵扰。
+
     FdContext::MutexType::Lock lock2(fd_ctx->mutex);
-    //当前加入的读写事件与fd之中的events重复
     if(fd_ctx->events & event) {
         SYLAR_LOG_ERROR(g_logger) << "addEvent assert fd=" << fd
                     << " event=" << event
                     << " fd_ctx.event=" << fd_ctx->events;
         SYLAR_ASSERT(!(fd_ctx->events & event));
     }
-    //如果不重复，直接判断加入事件的行为是添加还是修改
+
     int op = fd_ctx->events ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
     epoll_event epevent;
-    epevent.events = EPOLLET | fd_ctx->events | event;  //决定fd的行为是脉冲触发，读写事件。这里读写事件与epoll的事件同时对应。
+    epevent.events = EPOLLET | fd_ctx->events | event;
     epevent.data.ptr = fd_ctx;
-    //添加到红黑树上
+
     int rt = epoll_ctl(m_epfd, op, fd, &epevent);
     if(rt) {
         SYLAR_LOG_ERROR(g_logger) << "epoll_ctl(" << m_epfd << ", "
@@ -128,10 +125,8 @@ int IOManager::addEvent(int fd, Event event, std::function<void()> cb) {
     }
 
     ++m_pendingEventCount;
-    fd_ctx->events = (Event)(fd_ctx->events | event);              // 读写行为存到fd_ctx当中
+    fd_ctx->events = (Event)(fd_ctx->events | event);
     FdContext::EventContext& event_ctx = fd_ctx->getContext(event);
-
-    //对fd_ctx赋值回调函数及处理的调度器
     SYLAR_ASSERT(!event_ctx.scheduler
                 && !event_ctx.fiber
                 && !event_ctx.cb);
@@ -275,7 +270,7 @@ bool IOManager::stopping() {
     uint64_t timeout = 0;
     return stopping(timeout);
 }
-//空闲的idle执行流程
+
 void IOManager::idle() {
     epoll_event* events = new epoll_event[64]();
     std::shared_ptr<epoll_event> shared_events(events, [](epoll_event* ptr){
@@ -283,7 +278,7 @@ void IOManager::idle() {
     });
 
     while(true) {
-        uint64_t next_timeout = 0; 
+        uint64_t next_timeout = 0;
         if(stopping(next_timeout)) {
             SYLAR_LOG_INFO(g_logger) << "name=" << getName()
                                      << " idle stopping exit";
@@ -299,7 +294,6 @@ void IOManager::idle() {
             } else {
                 next_timeout = MAX_TIMEOUT;
             }
-            //timeout到时间之后，可能会返回0.
             rt = epoll_wait(m_epfd, events, 64, (int)next_timeout);
             if(rt < 0 && errno == EINTR) {
             } else {
@@ -314,13 +308,12 @@ void IOManager::idle() {
             schedule(cbs.begin(), cbs.end());
             cbs.clear();
         }
-        //循环每个事件的数据
+
         for(int i = 0; i < rt; ++i) {
             epoll_event& event = events[i];
             //先判断管道fd是否存在
             if(event.data.fd == m_tickleFds[0]) {
                 uint8_t dummy;
-                //将数据读取干净
                 while(read(m_tickleFds[0], &dummy, 1) == 1);
                 continue;
             }
@@ -341,7 +334,7 @@ void IOManager::idle() {
             if((fd_ctx->events & real_events) == NONE) {
                 continue;
             }
-            //只添加剩余的事件处理。
+
             int left_events = (fd_ctx->events & ~real_events);
             int op = left_events ? EPOLL_CTL_MOD : EPOLL_CTL_DEL;
             event.events = EPOLLET | left_events;
